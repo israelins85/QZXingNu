@@ -38,6 +38,7 @@ HEADERS += \
     $$PWD/zxing-cpp/core/src/Result.h \
     $$PWD/zxing-cpp/core/src/ResultMetadata.h \
     $$PWD/zxing-cpp/core/src/ResultPoint.h \
+    $$PWD/zxing-cpp/core/src/string-utils.h \
     $$PWD/zxing-cpp/core/src/TextDecoder.h \
     $$PWD/zxing-cpp/core/src/TextEncoder.h \
     $$PWD/zxing-cpp/core/src/TextUtfEncoding.h \
@@ -188,6 +189,7 @@ SOURCES += \
     $$PWD/zxing-cpp/core/src/Result.cpp \
     $$PWD/zxing-cpp/core/src/ResultMetadata.cpp \
     $$PWD/zxing-cpp/core/src/ResultPoint.cpp \
+    $$PWD/zxing-cpp/core/src/string-utils.cpp \
     $$PWD/zxing-cpp/core/src/TextDecoder.cpp \
     $$PWD/zxing-cpp/core/src/TextEncoder.cpp \
     $$PWD/zxing-cpp/core/src/TextUtfEncoding.cpp \
