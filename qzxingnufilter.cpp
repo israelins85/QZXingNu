@@ -13,7 +13,9 @@
 #include <zxing-cpp/core/src/Result.h>
 #include <QPointer>
 
+#if (QT_VERSION < QT_VERSION_CHECK(5, 15, 0))
 extern QImage qt_imageFromVideoFrame(const QVideoFrame &frame);
+#endif
 
 class QZXingNuFilterRunnable : public QObject, public QVideoFilterRunnable
 {
@@ -57,7 +59,11 @@ public:
 
         m_filter->m_lastFrameCheckedTime.start();
 
+#if (QT_VERSION < QT_VERSION_CHECK(5, 15, 0))
         auto frame = qt_imageFromVideoFrame(*input);
+#else
+        auto frame = input->image();
+#endif
         auto bound = std::bind(&QZXingNu::decodeImage, m_filter->m_qzxingNu, std::placeholders::_1);
         auto watcher = new QFutureWatcher<QZXingNu::DecodeResult>(this);
         QObject::connect(watcher, &QFutureWatcher<QZXingNu::DecodeResult>::finished, this,
