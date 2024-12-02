@@ -18,96 +18,87 @@ using ZXing::HybridBinarizer;
 using ZXing::MultiFormatReader;
 using ZXing::Result;
 
-static QVector<QPointF> toQVectorOfQPoints(const std::vector<ZXing::ResultPoint> &points)
-{
+static QVector<QPointF> toQVectorOfQPoints(const std::vector<ZXing::ResultPoint>& points) {
     QVector<QPointF> result;
-    for (const auto &point : points) {
+    for (const auto& point : points) {
         result.append(QPointF(point.x(), point.y()));
     }
     return result;
 }
 
-static QZXingNu::DecodeResult toQZXingNuDecodeResult(const ZXing::Result &result)
-{
-    return { static_cast<QZXingNu::DecodeStatus>(result.status()),
-             static_cast<QZXingNu::BarcodeFormat>(result.format()),
-             QString::fromStdWString(result.text()),
-             QByteArray(result.rawBytes().charPtr(), result.rawBytes().length()),
-             toQVectorOfQPoints(result.resultPoints()),
-             result.isValid() };
+static QZXingNu::DecodeResult toQZXingNuDecodeResult(const ZXing::Result& result) {
+    return {
+        static_cast<QZXingNu::DecodeStatus>(result.status()),
+        static_cast<QZXingNu::BarcodeFormat>(result.format()),
+        QString::fromStdWString(result.text()),
+        QByteArray(result.rawBytes().charPtr(), result.rawBytes().length()),
+        toQVectorOfQPoints(result.resultPoints()),
+        result.isValid()};
 }
 
-static ZXingFormats zxingFormats(const QVector<int> &from)
-{
+static ZXingFormats zxingFormats(const QVector<int>& from) {
     ZXingFormats result;
     result.reserve(static_cast<ZXingFormats::size_type>(from.size()));
-    std::transform(from.begin(), from.end(), std::back_inserter(result),
-                   [](int a) { return static_cast<ZXing::BarcodeFormat>(a); });
+    std::transform(from.begin(), from.end(), std::back_inserter(result), [](int a) {
+        return static_cast<ZXing::BarcodeFormat>(a);
+    });
     return result;
 }
 
-QZXingNu::QZXingNu(QObject *parent)
-    : QObject(parent)
-{
+QZXingNu::QZXingNu(QObject* parent)
+    : QObject(parent) {
     connect(this, &QZXingNu::queueDecodeResult, this, &QZXingNu::setDecodeResult);
 }
 
-QVector<int> QZXingNu::formats() const
-{
+QVector<int> QZXingNu::formats() const {
     return m_formats;
 }
 
-bool QZXingNu::tryHarder() const
-{
+bool QZXingNu::tryHarder() const {
     return m_tryHarder;
 }
 
-bool QZXingNu::tryRotate() const
-{
+bool QZXingNu::tryRotate() const {
     return m_tryRotate;
 }
 
-QZXingNu::DecodeResult QZXingNu::decodeResult() const
-{
+QZXingNu::DecodeResult QZXingNu::decodeResult() const {
     return m_decodeResult;
 }
 
 #ifdef QT_QML_LIB
-void QZXingNu::registerQMLTypes()
-{
+void QZXingNu::registerQMLTypes() {
     qRegisterMetaType<QZXingNu::DecodeResult>("DecodeResult");
     qRegisterMetaType<QZXingNu::DecodeStatus>("DecodeStatus");
     qRegisterMetaType<QZXingNu::BarcodeFormat>("BarcodeFormat");
 
-    qmlRegisterUncreatableMetaObject(QZXingNu::staticMetaObject, "com.github.swex.QZXingNu", 1, 0,
-                                     "QZXingNu", "Error: only enums allowed");
+    qmlRegisterUncreatableMetaObject(
+        QZXingNu::staticMetaObject, "com.github.swex.QZXingNu", 1, 0, "QZXingNu",
+        "Error: only enums allowed");
     qmlRegisterType<QZXingNuFilter>("com.github.swex.QZXingNu", 1, 0, "QZXingNuFilter");
     qmlRegisterType<QZXingNu>("com.github.swex.QZXingNu", 1, 0, "QZXingNu");
 }
 #endif
 
-QZXingNu::DecodeResult QZXingNu::decodeImage(const QImage &image)
-{
+QZXingNu::DecodeResult QZXingNu::decodeImage(const QImage& image) {
     // reentrant
     auto generic = std::make_shared<GenericLuminanceSource>(
         image.width(), image.height(), image.bits(), image.width() * 4, 4, 0, 1, 2);
     DecodeHints hints;
-    auto convertFormats = [this]() { return zxingFormats(m_formats); };
+    auto        convertFormats = [this]() { return zxingFormats(m_formats); };
     hints.setPossibleFormats(convertFormats());
     hints.setShouldTryHarder(m_tryHarder);
     hints.setShouldTryRotate(m_tryRotate);
     MultiFormatReader reader(hints);
-    auto result = reader.read(HybridBinarizer(generic));
+    auto              result       = reader.read(HybridBinarizer(generic));
+    auto              qzxingResult = toQZXingNuDecodeResult(result);
     if (result.isValid()) {
-        auto qzxingResult = toQZXingNuDecodeResult(result);
         emit queueDecodeResult(qzxingResult);
-        return qzxingResult;
     }
-    return {};
+    return qzxingResult;
 }
 
-void QZXingNu::setFormats(QVector<int> formats)
-{
+void QZXingNu::setFormats(QVector<int> formats) {
     if (m_formats == formats)
         return;
 
@@ -115,8 +106,7 @@ void QZXingNu::setFormats(QVector<int> formats)
     emit formatsChanged(m_formats);
 }
 
-void QZXingNu::setTryHarder(bool tryHarder)
-{
+void QZXingNu::setTryHarder(bool tryHarder) {
     if (m_tryHarder == tryHarder)
         return;
 
@@ -124,8 +114,7 @@ void QZXingNu::setTryHarder(bool tryHarder)
     emit tryHarderChanged(m_tryHarder);
 }
 
-void QZXingNu::setTryRotate(bool tryRotate)
-{
+void QZXingNu::setTryRotate(bool tryRotate) {
     if (m_tryRotate == tryRotate)
         return;
 
@@ -133,8 +122,7 @@ void QZXingNu::setTryRotate(bool tryRotate)
     emit tryRotateChanged(m_tryRotate);
 }
 
-void QZXingNu::setDecodeResult(QZXingNu::DecodeResult decodeResult)
-{
+void QZXingNu::setDecodeResult(QZXingNu::DecodeResult decodeResult) {
     m_decodeResult = decodeResult;
     emit decodeResultChanged(m_decodeResult);
 }

@@ -1,6 +1,6 @@
-QT += core gui multimedia concurrent
+QT += core multimedia concurrent
 
-CONFIG += qt warn_on
+CONFIG += qt
 
 include($$PWD/zxing-cpp.pri)
 

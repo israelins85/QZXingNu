@@ -5,9 +5,13 @@
 #include <QObject>
 #include <memory>
 
-class QZXingNu : public QObject
-{
+class QZXingNu : public QObject {
     Q_OBJECT
+
+    Q_PROPERTY(QVector<int> formats READ formats WRITE setFormats NOTIFY formatsChanged)
+    Q_PROPERTY(bool tryHarder READ tryHarder WRITE setTryHarder NOTIFY tryHarderChanged)
+    Q_PROPERTY(bool tryRotate READ tryRotate WRITE setTryRotate NOTIFY tryRotateChanged)
+    Q_PROPERTY(QZXingNu::DecodeResult decodeResult READ decodeResult NOTIFY decodeResultChanged)
 
 public:
     enum class BarcodeFormat {
@@ -77,28 +81,23 @@ public:
     Q_ENUM(DecodeStatus)
 
     struct DecodeResult {
-        QZXingNu::DecodeStatus status;
-        QZXingNu::BarcodeFormat format;
-        QString text;
-        QByteArray rawBytes;
-        QVector<QPointF> points;
-        bool valid;
+        QZXingNu::DecodeStatus  status = DecodeStatus::NotFound;
+        QZXingNu::BarcodeFormat format = BarcodeFormat::FORMAT_COUNT;
+        QString                 text;
+        QByteArray              rawBytes;
+        QVector<QPointF>        points;
+        bool                    valid = false;
     };
-
-    Q_PROPERTY(QVector<int> formats READ formats WRITE setFormats NOTIFY formatsChanged)
-    Q_PROPERTY(bool tryHarder READ tryHarder WRITE setTryHarder NOTIFY tryHarderChanged)
-    Q_PROPERTY(bool tryRotate READ tryRotate WRITE setTryRotate NOTIFY tryRotateChanged)
-    Q_PROPERTY(QZXingNu::DecodeResult decodeResult READ decodeResult NOTIFY decodeResultChanged)
-    QVector<int> m_formats;
-    bool m_tryHarder = false;
-    bool m_tryRotate = false;
+    QVector<int>           m_formats;
+    bool                   m_tryHarder = false;
+    bool                   m_tryRotate = false;
     QZXingNu::DecodeResult m_decodeResult;
 
 public:
-    explicit QZXingNu(QObject *parent = nullptr);
-    QVector<int> formats() const;
-    bool tryHarder() const;
-    bool tryRotate() const;
+    explicit QZXingNu(QObject* parent = nullptr);
+    QVector<int>           formats() const;
+    bool                   tryHarder() const;
+    bool                   tryRotate() const;
     QZXingNu::DecodeResult decodeResult() const;
 
 #ifdef QT_QML_LIB
@@ -114,10 +113,10 @@ signals:
     void queueDecodeResult(QZXingNu::DecodeResult result);
 
 public slots:
-    QZXingNu::DecodeResult decodeImage(const QImage &image);
-    void setFormats(QVector<int> formats);
-    void setTryHarder(bool tryHarder);
-    void setTryRotate(bool tryRotate);
+    QZXingNu::DecodeResult decodeImage(const QImage& image);
+    void                   setFormats(QVector<int> formats);
+    void                   setTryHarder(bool tryHarder);
+    void                   setTryRotate(bool tryRotate);
 
 protected:
     void setDecodeResult(QZXingNu::DecodeResult decodeResult);
