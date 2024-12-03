@@ -19,13 +19,8 @@ void QZXingNuFilter::processVideoFrame(const QVideoFrame& a_videoFrame) {
     if (m_busy)
         return;
 
-    if (!m_enabled) {
+    if (!m_enabled)
         return;
-    }
-
-    if (!a_videoFrame.isValid()) {
-        return;
-    }
 
     if (m_lastFrameCheckedTime.isValid() &&
         m_lastFrameCheckedTime.elapsed() < m_intervalToCheckFrames) {
@@ -33,11 +28,14 @@ void QZXingNuFilter::processVideoFrame(const QVideoFrame& a_videoFrame) {
         return;
     }
 
+    if (!a_videoFrame.isValid())
+        return;
+
+    m_lastFrameCheckedTime.start();
     m_busy = true;
     QThreadPool::globalInstance()->start([this, a_videoFrame]() {
         try {
-            QImage l_image;
-
+            QImage      l_image;
             QVideoFrame l_frame(a_videoFrame);
 
             l_frame.map(QVideoFrame::ReadOnly);
@@ -45,21 +43,22 @@ void QZXingNuFilter::processVideoFrame(const QVideoFrame& a_videoFrame) {
             l_frame.unmap();
 
             // cropping image to captureRect
-            if (captureRect().isValid()) {
-                l_image = l_image.copy(captureRect());
-            }
+            // if (captureRect().isValid()) {
+            //     l_image = l_image.copy(captureRect());
+            // }
 
             // processing the image
-            m_qzxingNu->decodeImage(l_image);
+            auto result = m_qzxingNu->decodeImage(l_image);
+            qDebug() << "result" << result.valid << result.status;
         } catch (...) {
             qCritical() << "An error occurred.";
         }
         m_busy = false;
     });
-    m_lastFrameCheckedTime.start();
 }
 
 void QZXingNuFilter::decoded(QZXingNu::DecodeResult a_result) {
+    qDebug() << "decoded" << a_result.valid << a_result.status;
     if (!a_result.valid)
         return;
     if (a_result.status == QZXingNu::DecodeStatus::NoError)
