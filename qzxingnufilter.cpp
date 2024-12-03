@@ -49,7 +49,6 @@ void QZXingNuFilter::processVideoFrame(const QVideoFrame& a_videoFrame) {
 
             // processing the image
             auto result = m_qzxingNu->decodeImage(l_image);
-            qDebug() << "result" << result.valid << result.status;
         } catch (...) {
             qCritical() << "An error occurred.";
         }
@@ -58,7 +57,6 @@ void QZXingNuFilter::processVideoFrame(const QVideoFrame& a_videoFrame) {
 }
 
 void QZXingNuFilter::decoded(QZXingNu::DecodeResult a_result) {
-    qDebug() << "decoded" << a_result.valid << a_result.status;
     if (!a_result.valid)
         return;
     if (a_result.status == QZXingNu::DecodeStatus::NoError)
