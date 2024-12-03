@@ -72,11 +72,8 @@ void QZXingNu::registerQMLTypes() {
     qRegisterMetaType<QZXingNu::DecodeStatus>("DecodeStatus");
     qRegisterMetaType<QZXingNu::BarcodeFormat>("BarcodeFormat");
 
-    qmlRegisterUncreatableMetaObject(
-        QZXingNu::staticMetaObject, "com.github.swex.QZXingNu", 1, 0, "QZXingNu",
-        "Error: only enums allowed");
-    qmlRegisterType<QZXingNuFilter>("com.github.swex.QZXingNu", 1, 0, "QZXingNuFilter");
     qmlRegisterType<QZXingNu>("com.github.swex.QZXingNu", 1, 0, "QZXingNu");
+    qmlRegisterType<QZXingNuFilter>("com.github.swex.QZXingNu", 1, 0, "QZXingNuFilter");
 }
 #endif
 
