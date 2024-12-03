@@ -9,6 +9,7 @@
 class QZXingNuFilter : public QObject {
     Q_OBJECT
     Q_PROPERTY(QZXingNu* qzxingNu READ qzxingNu WRITE setQzxingNu NOTIFY qzxingNuChanged)
+    Q_PROPERTY(QRect videoRect READ videoRect WRITE setVideoRect NOTIFY videoRectChanged)
     Q_PROPERTY(QRect captureRect READ captureRect WRITE setCaptureRect NOTIFY captureRectChanged)
     Q_PROPERTY(qint32 intervalToCheckFrames READ intervalToCheckFrames WRITE
                    setIntervalToCheckFrames NOTIFY intervalToCheckFramesChanged)
@@ -19,7 +20,7 @@ class QZXingNuFilter : public QObject {
     QZXingNu*     m_qzxingNu  = nullptr;
     QRect         m_captureRect;
     QElapsedTimer m_lastFrameCheckedTime;
-    qint32        m_intervalToCheckFrames = 1000;
+    qint32        m_intervalToCheckFrames = 250;
 
     void processVideoFrame(const QVideoFrame& a_videoFrame);
     void decoded(QZXingNu::DecodeResult a_result);
@@ -42,6 +43,9 @@ public:
     bool enabled() const;
     void setEnabled(bool newEnabled);
 
+    QRect videoRect() const;
+    void setVideoRect(const QRect &newVideoRect);
+
 public slots:
     void setQzxingNu(QZXingNu* a_qzxingNu);
 
@@ -53,9 +57,12 @@ signals:
     void enabledChanged();
     void videoSinkChanged();
 
+    void videoRectChanged();
+
 private:
     bool m_enabled = true;
     bool m_busy    = false;
+    QRect m_videoRect;
 };
 
 #endif // QZXINGNUFILTER_H

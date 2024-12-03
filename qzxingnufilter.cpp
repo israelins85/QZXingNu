@@ -43,12 +43,14 @@ void QZXingNuFilter::processVideoFrame(const QVideoFrame& a_videoFrame) {
             l_frame.unmap();
 
             // cropping image to captureRect
-            // if (captureRect().isValid()) {
-            //     l_image = l_image.copy(captureRect());
-            // }
+            if (videoRect().isValid() && captureRect().isValid()) {
+                l_image = l_image.scaled(
+                    videoRect().size(), Qt::IgnoreAspectRatio, Qt::FastTransformation);
+                l_image = l_image.copy(captureRect());
+            }
 
             // processing the image
-            auto result = m_qzxingNu->decodeImage(l_image);
+            m_qzxingNu->decodeImage(l_image);
         } catch (...) {
             qCritical() << "An error occurred.";
         }
@@ -144,4 +146,15 @@ void QZXingNuFilter::setEnabled(bool newEnabled) {
         return;
     m_enabled = newEnabled;
     emit enabledChanged();
+}
+
+QRect QZXingNuFilter::videoRect() const {
+    return m_videoRect;
+}
+
+void QZXingNuFilter::setVideoRect(const QRect& newVideoRect) {
+    if (m_videoRect == newVideoRect)
+        return;
+    m_videoRect = newVideoRect;
+    emit videoRectChanged();
 }
