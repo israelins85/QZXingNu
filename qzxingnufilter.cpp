@@ -1,72 +1,74 @@
 #include "qzxingnufilter.h"
+#include "qzxingnu.h"
+
 #include <QFutureWatcher>
 #include <QPointer>
+#include <QTimer>
 #include <QVariant>
+#include <QVideoSink>
 #include <QtConcurrent>
 #include <functional>
 #include <memory>
-#include <qzxingnu.h>
+
 #include <zxing-cpp/core/src/BarcodeFormat.h>
 #include <zxing-cpp/core/src/DecodeHints.h>
 #include <zxing-cpp/core/src/GenericLuminanceSource.h>
 #include <zxing-cpp/core/src/HybridBinarizer.h>
 #include <zxing-cpp/core/src/MultiFormatReader.h>
 #include <zxing-cpp/core/src/Result.h>
-#include <QTimer>
 
-namespace QZXingNu {
-
-QZXingNuFilter::QZXingNuFilter(QObject *parent)
+QZXingNuFilter::QZXingNuFilter(QObject* parent)
     : QObject(parent)
-    , m_threadPool(new QThreadPool(this))
-    , m_timer(new QTimer(this))
 {
-    m_threadPool->setMaxThreadCount(QThread::idealThreadCount() > 1 ? QThread::idealThreadCount() - 1 : QThread::idealThreadCount());
-    m_timer->setInterval(200);
-    m_timer->setSingleShot(false);
-    m_timer->start();
-    connect(m_timer, &QTimer::timeout, this, [this]() {
-        if (m_decodersRunning >= m_threadPool->maxThreadCount()) {
-            return;
-        }
-
-        if (!m_videoSink) {
-            return;
-        }
-        if (!m_qzxingNu) {
-            return;
-        }
-        QPointer<QZXingNuFilter> filterPointer(this);
-        auto watcher = new QFutureWatcher<QZXingNuDecodeResult>();
-        QObject::connect(watcher, &QFutureWatcher<QZXingNuDecodeResult>::finished, this, [watcher, filterPointer]() {
-            if (filterPointer) {
-                filterPointer->m_decodersRunning--;
-            }
-            auto result = watcher->future().result();
-            delete watcher;
-            return result;
-        });
-        m_decodersRunning++;
-        auto future =
-            QtConcurrent::run(m_threadPool, [this, frame = m_videoSink->videoFrame()]() { return m_qzxingNu->decodeImage(frame); });
-        watcher->setFuture(future);
-    });
-    connect(this, &QZXingNuFilter::qzxingNuChanged, this,
-            [this]() { connect(m_qzxingNu, &QZXingNu::decodeResultChanged, this, &QZXingNuFilter::setDecodeResult); });
-    connect(this, &QZXingNuFilter::decodeResultChanged, this, [this]() { emit tagFound(m_decodeResult.text); });
+    // when founded "stop" the decoding
+    connect(
+        this,
+        &QZXingNuFilter::decodedResult,
+        this,
+        [this](QZXingNuDecodeResult result) {
+            // só precisa de um resultado valido
+            setRunning(false);
+            emit codeRecognized(result.text, result.format);
+        },
+        Qt::QueuedConnection);
 }
 
-QZXingNu *QZXingNuFilter::qzxingNu() const
+QZXingNu* QZXingNuFilter::qzxingNu() const
 {
     return m_qzxingNu;
 }
 
-QZXingNuDecodeResult QZXingNuFilter::decodeResult() const
+QVideoSink* QZXingNuFilter::videoSink() const
 {
-    return m_decodeResult;
+    return m_videoSink;
 }
 
-void QZXingNuFilter::setQzxingNu(QZXingNu *qzxingNu)
+void QZXingNuFilter::frameChanged(const QVideoFrame& frame)
+{
+    if (!m_running)
+        return;
+
+    if (!m_qzxingNu)
+        return;
+
+    if (m_decodersRunning > 0)
+        return;
+
+    if (m_lastFrameProcess.isValid() && m_lastFrameProcess.elapsed() < m_intervalDecode)
+        return;
+
+    m_lastFrameProcess.start();
+    m_decodersRunning++;
+    auto future = QtConcurrent::run([this, frame]() {
+        auto result = m_qzxingNu->decodeFrame(frame);
+        if (result.valid)
+            emit decodedResult(result);
+        m_decodersRunning--;
+    });
+    Q_UNUSED(future);
+}
+
+void QZXingNuFilter::setQzxingNu(QZXingNu* qzxingNu)
 {
     if (m_qzxingNu == qzxingNu)
         return;
@@ -75,23 +77,45 @@ void QZXingNuFilter::setQzxingNu(QZXingNu *qzxingNu)
     emit qzxingNuChanged(m_qzxingNu);
 }
 
-void QZXingNuFilter::setDecodeResult(QZXingNuDecodeResult decodeResult)
-{
-    m_decodeResult = decodeResult;
-    emit decodeResultChanged(m_decodeResult);
-}
-
-QVideoSink *QZXingNuFilter::videoSink() const
-{
-    return m_videoSink;
-}
-
-void QZXingNuFilter::setVideoSink(QVideoSink *newVideoSink)
+void QZXingNuFilter::setVideoSink(QVideoSink* newVideoSink)
 {
     if (m_videoSink == newVideoSink)
         return;
+
+    if (m_videoSink != nullptr) {
+        disconnect(m_videoSink, &QVideoSink::videoFrameChanged, this, &QZXingNuFilter::frameChanged);
+    }
+
     m_videoSink = newVideoSink;
     emit videoSinkChanged();
+
+    if (m_videoSink != nullptr) {
+        connect(m_videoSink, &QVideoSink::videoFrameChanged, this, &QZXingNuFilter::frameChanged);
+    }
 }
 
-} // namespace QZXingNu
+bool QZXingNuFilter::running() const
+{
+    return m_running;
+}
+
+void QZXingNuFilter::setRunning(bool newRunning)
+{
+    if (m_running == newRunning)
+        return;
+    m_running = newRunning;
+    emit runningChanged();
+}
+
+int QZXingNuFilter::intervalDecode() const
+{
+    return m_intervalDecode;
+}
+
+void QZXingNuFilter::setIntervalDecode(int newIntervalDecode)
+{
+    if (m_intervalDecode == newIntervalDecode)
+        return;
+    m_intervalDecode = newIntervalDecode;
+    emit intervalDecodeChanged();
+}

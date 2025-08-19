@@ -1,49 +1,53 @@
-#ifndef QZXINGNUFILTER_H
-#define QZXINGNUFILTER_H
+#pragma once
 
-#include <qzxingnu.h>
-#include <QMediaCaptureSession>
 #include <QImageCapture>
-#include <QVideoSink>
+#include <QMediaCaptureSession>
 #include <QThreadPool>
-
-namespace QZXingNu {
+#include <QVideoSink>
+#include <qzxingnu.h>
 
 class QZXingNuFilter : public QObject
 {
     Q_OBJECT
-    Q_PROPERTY(QZXingNu *qzxingNu READ qzxingNu WRITE setQzxingNu NOTIFY qzxingNuChanged)
-    Q_PROPERTY(QZXingNuDecodeResult decodeResult READ decodeResult WRITE setDecodeResult NOTIFY decodeResultChanged)
-    Q_PROPERTY(QVideoSink *videoSink READ videoSink WRITE setVideoSink NOTIFY videoSinkChanged)
-    QThreadPool *m_threadPool;
+    Q_PROPERTY(bool running READ running WRITE setRunning NOTIFY runningChanged)
+    Q_PROPERTY(QZXingNu* qzxingNu READ qzxingNu WRITE setQzxingNu NOTIFY qzxingNuChanged)
+    Q_PROPERTY(QVideoSink* videoSink READ videoSink WRITE setVideoSink NOTIFY videoSinkChanged)
+    Q_PROPERTY(int intervalDecode READ intervalDecode WRITE setIntervalDecode NOTIFY
+                   intervalDecodeChanged FINAL)
 
-    QZXingNu *m_qzxingNu = nullptr;
-    QZXingNuDecodeResult m_decodeResult;
-    QVideoSink *m_videoSink = nullptr;
-    QTimer *m_timer;
-    int m_decodersRunning = 0;
+    QZXingNu*     m_qzxingNu  = nullptr;
+    QVideoSink*   m_videoSink = nullptr;
+    QAtomicInt    m_decodersRunning;
+    bool          m_running = true;
+    QElapsedTimer m_lastFrameProcess;
+    int           m_intervalDecode = 200;
 
 public:
-    QZXingNuFilter(QObject *parent = nullptr);
+    QZXingNuFilter(QObject* parent = nullptr);
 
-public:
-    QZXingNu *qzxingNu() const;
-    QZXingNuDecodeResult decodeResult() const;
+    QZXingNu*            qzxingNu() const;
+    QVideoSink*          videoSink() const;
 
-    QVideoSink *videoSink() const;
-    void setVideoSink(QVideoSink *newVideoSink);
+    bool running() const;
+    void setRunning(bool newRunning);
+
+    int  intervalDecode() const;
+    void setIntervalDecode(int newIntervalDecode);
+
+private:
+    void frameChanged(const QVideoFrame& frame);
 
 signals:
-    void tagFound(QString tag);
+    void codeRecognized(QString code, QZXingNuDecodeResult::BarcodeFormat format);
+
 public slots:
-    void setQzxingNu(QZXingNu *qzxingNu);
-    void setDecodeResult(QZXingNuDecodeResult decodeResult);
+    void setQzxingNu(QZXingNu* qzxingNu);
+    void setVideoSink(QVideoSink* newVideoSink);
 
 signals:
-    void qzxingNuChanged(QZXingNu *qzxingNu);
-    void decodeResultChanged(QZXingNuDecodeResult decodeResult);
+    void qzxingNuChanged(QZXingNu* qzxingNu);
+    void decodedResult(QZXingNuDecodeResult result);
     void videoSinkChanged();
+    void runningChanged();
+    void intervalDecodeChanged();
 };
-
-} // namespace QZXingNu
-#endif // QZXINGNUFILTER_H
